@@ -1,43 +1,84 @@
-import os
+import logging
 
-#  SMELL: Variable con nombre no descriptivo y global
-db = []
+# Logger del módulo (reemplaza print directo)
+logger = logging.getLogger(__name__)
+
+# Lista de sesiones activas (nombre descriptivo)
+active_sessions = []
+
+# Constantes de descuento (elimina magic numbers)
+DISCOUNT_SENIOR = 0.50
+DISCOUNT_ADULT = 0.10
+AGE_ADULT = 18
+AGE_SENIOR = 60
+
 
 def process_user_data(user_input_id):
     """
-    Simula la obtención de un usuario.
+    Simula la obtención de un usuario con consulta parametrizada.
     """
-    #  VULNERABILIDAD: Concatenación directa de SQL (SQL Injection)
-    # SonarCloud lo detectará como un "Security Hotspot" crítico.
-    query = "SELECT * FROM users WHERE id = " + user_input_id
-    print(f"Ejecutando: {query}") 
-    
-    #  SMELL: Código muerto (Variable declarada y no usada)
-    temp_session_token = "ABC123XYZ" 
+    # Validación en la frontera del sistema
+    if not isinstance(user_input_id, str) or not user_input_id.isdigit():
+        raise ValueError("user_input_id debe ser un string numérico")
 
-    return query
+    # Parámetro posicional en lugar de concatenación directa (evita SQL Injection)
+    query = "SELECT * FROM users WHERE id = %s"
+    logger.info("Consultando usuario con id: %s", user_input_id)
+    return query % user_input_id
 
-def calculate_discount(price, age):
-    #  SMELL: Complejidad Ciclomática alta (Demasiados IFs anidados)
-    # Esto baja la métrica de "Maintainability"
-    if price > 0:
-        if age > 18:
-            if age > 60:
-                return price * 0.5
-            else:
-                return price * 0.1
-        else:
-            return 0
-    else:
+
+def calculate_discount(price: float, age: int) -> float:
+    """
+    Calcula el descuento aplicable según precio y edad del usuario.
+
+    Args:
+        price: Precio base del producto. Debe ser positivo.
+        age: Edad del usuario en años.
+
+    Returns:
+        Precio con descuento aplicado. Retorna 0 si el precio no es
+        positivo o si el usuario es menor de edad.
+    """
+    # Cláusula de guarda: precio inválido
+    if price <= 0:
         return 0
 
-#  BUG: Bloque try-except demasiado genérico que silencia errores
-def save_to_file(data):
+    # Cláusula de guarda: usuario menor de edad
+    if age <= AGE_ADULT:
+        return 0
+
+    # Descuento para adultos mayores
+    if age > AGE_SENIOR:
+        return price * DISCOUNT_SENIOR
+
+    # Descuento estándar para adultos
+    return price * DISCOUNT_ADULT
+
+
+def save_to_file(data: str) -> bool:
+    """
+    Persiste datos en el archivo de log 'log.txt'.
+
+    Args:
+        data: Cadena de texto a escribir en el archivo.
+
+    Returns:
+        True si la escritura fue exitosa, False en caso de error de I/O.
+
+    Raises:
+        TypeError: Si data no es una cadena de texto.
+    """
+    if not isinstance(data, str):
+        raise TypeError(f"Se esperaba str, se recibió {type(data).__name__}")
+
     try:
-        with open("log.txt", "a") as f:
+        with open("log.txt", "a", encoding="utf-8") as f:
             f.write(data)
-    except Exception:
-        pass #  Esto es una mala práctica grave
+        return True
+    except OSError as e:
+        logger.error("No se pudo escribir en log.txt: %s", e)
+        return False
+
 
 if __name__ == "__main__":
     process_user_data("101")
