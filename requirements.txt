@@ -1,0 +1,11 @@
+# --- Librerías de la Aplicación ---
+flask==2.0.1
+requests==2.25.1
+#  Versión vulnerable para que Sonar/Safety la detecte
+django==1.11.29 
+
+# --- Librerías de Testing y Calidad ---
+pytest==8.0.0          # Framework de pruebas
+pytest-cov==4.1.0      # Genera el reporte de cobertura (XML) para Sonar
+flake8==7.0.0          # Analizador de estilo (Linter)
+safety==3.0.0          # Auditor de seguridad de dependencias
